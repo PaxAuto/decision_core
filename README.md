@@ -7,15 +7,15 @@
 - [Description](#-description)
 - [Architecture](#-architecture)
 - [Interfaces](#-interfaces)
-- [User Stories & Acceptance Criteria](#-user-stories--acceptance-criteria)
+- [User Stories ](#-user-stories)
 - [Installation](#-installation)
 - [Usage](#-usage)
 - [Contributor](#-contributor)
 - [License](#-license)
 
 ## 🧠 Description
-The Decision Core is a key component of the autonomous shuttle system. It is responsible for interpreting system-level inputs and making essential operational decisions to ensure safe and coordinated shuttle behavior. It receives inputs such as the emergency stop signal, authorization status, shuttle selection command, and close obstacle detection status. These inputs reflect both user commands and real-time environmental conditions.
-Based on this data, the Decision Core generates key outputs that affect the shuttle’s behavior. It sends high-level commands to  V2X communication via the decisions and requests topic, often in the form of DENM (Decentralized Environmental Notification Messages) such as broadcasting warnings or alerts about dangerous situations or events on the road. It also controls the door mechanism, triggers obstacle warnings when necessary, and broadcasts the current operational state of the shuttle. By continuously monitoring these inputs and updating its outputs accordingly, the Decision Core ensures that the shuttle operates safely, reacts promptly to emergencies, and follows authorized procedures under dynamic conditions.
+The Decision Core is a central part of the autonomous shuttle system. It receives important input signals such as the emergency button status, authorization result, shuttle selection, and close obstacle detection. Based on this information, the Decision Core makes key decisions to control the shuttle’s behavior. It sends commands to open or close doors, gives obstacle warnings, updates the shuttle’s current state, and shares decision updates with other systems. By continuously checking all inputs and sending the right outputs, the Decision Core helps the shuttle run safely, respond quickly to changes, and follow the correct procedures.
+
 
 
 ## 🧩 Architecture
@@ -43,7 +43,7 @@ graph LR
         DC["/decisions_and_requests"]:::grayEllipse
         PP["/door_control"]:::grayEllipse
                 CD["/obstacle_warning"]:::grayEllipse
-        BF["/planned_path"]:::grayEllipse
+        BF["/state"]:::grayEllipse
     end
 
     %% Ellipse shape class
@@ -73,43 +73,34 @@ graph LR
 ### Topics:
 | Name                         | IO      | Type                 | Description                                                              |
 |------------------------------|---------|----------------------|--------------------------------------------------------------------------|
-| `/emergency_button`        | Input   | `std_msgs/Bool`      |  Indicates whether the emergency stop button has been pressed.              |
-| `/authorization_result`         | Input   | `std_msgs/Bool`      | Shows if the shuttle has received permission to operate.                   |
-| `/select_shuttle`        | Input   | `std_msgs/Int8.msg`      |Specifies the ID of the shuttle selected for operation.                |
-| `/close_obstacle_detection_status`         | Input   | `std_msgs/Bool`      | Signals whether a close-range obstacle has been detected near the shuttle. |
-| `/decisions_and_requests`           | Output  | `std_msgs/String`      |Publishes high-level system commands and DENM messages for coordination.   |
-| `/door_control`           | Output  | `std_msgs/Bool`      |  Controls the opening and closing of the shuttle doors.                   |
-| `/obstacle_warning`           | Output  | `std_msgs/Bool`      |Issues a warning when a nearby obstacle is detected.                     |
-| `/planned_path`           | Output  | `nav_msgs/Path.msg`      |Provides the computed navigation path from the shuttle’s current position to the target location.|
+| `/emergency_button`        | Input   | `std_msgs/msg/Bool.msg`      |  Indicates whether the emergency stop button has been pressed.              |
+| `/authorization_result`         | Input   | `std_msgs/msg/Bool.msg`      | Shows if the shuttle has received permission to operate.                   |
+| `/select_shuttle`        | Input   | `std_msgs/msg/Int8.msg`      |Specifies the ID of the shuttle selected for operation.                |
+| `/close_obstacle_detection_status`         | Input   | `std_msgs/msg/Bool.msg`      | Signals whether a close-range obstacle has been detected near the shuttle. |
+| `/decisions_and_requests`           | Output  | `std_msgs/msg/String.msg`      |Publishes high-level system commands and DENM messages for coordination.   |
+| `/door_control`           | Output  | `std_msgs/msg/Bool.msg`      |  Controls the opening and closing of the shuttle doors.                   |
+| `/obstacle_warning`           | Output  | `std_msgs/msg/Bool.msg`      |Issues a warning when a nearby obstacle is detected.                     |
+| `/state`           | Output  | `std_msgs/msg/Int32.msg`      | 	Indicates the navigation goal: 0 = Pickup, 1 = Drop-off, 2 = Parking.|
 
 ### Custom messages:
 No custom message.
 ### Interface test process:
-Write steps to test the interface
+Will be implemented in next Module
 
-## 🎯 User Stories & Acceptance Criteria
-### Heading
-**User Story x.x**  
-_xx_
- 
-**Acceptance Criteria**  
-- **x.x.1** xx  
-- **x.x.2** xx  
+## 🎯 User Stories 
+Will be implemented in next Module
+
 
 ## 🛠️ Installation
-```bash
-git clone xx.git
-```
+Will be implemented in next Module
+
 
 ## ▶️ Usage
-Run the node:
-```bash
-ros2 run xx xx
-```
+Will be implemented in next Module
+
 
 ## 🧑‍💻 Contributor
-[Name](https://git.hs-coburg.de/username)
+[Everyone](https://git.hs-coburg.de/username)
 
 ## 🔒 License
 Licensed under the **Apache 2.0 License**. See [LICENSE](LICENSE) for details.
-
