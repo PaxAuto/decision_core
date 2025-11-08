@@ -1,0 +1,18 @@
+{
+    "python.autoComplete.extraPaths": [
+        "/home/harsh/ros2_ws/install/decoder/lib/python3.10/site-packages",
+        "/home/harsh/ros2_ws/install/etsi_its_spatem_ts_msgs/local/lib/python3.10/dist-packages",
+        "/home/harsh/ros2_ws/install/custom_msgs/local/lib/python3.10/dist-packages",
+        "/home/harsh/state_ws/install/decision_core/lib/python3.10/site-packages",
+        "/opt/ros/humble/lib/python3.10/site-packages",
+        "/opt/ros/humble/local/lib/python3.10/dist-packages"
+    ],
+    "python.analysis.extraPaths": [
+        "/home/harsh/ros2_ws/install/decoder/lib/python3.10/site-packages",
+        "/home/harsh/ros2_ws/install/etsi_its_spatem_ts_msgs/local/lib/python3.10/dist-packages",
+        "/home/harsh/ros2_ws/install/custom_msgs/local/lib/python3.10/dist-packages",
+        "/home/harsh/state_ws/install/decision_core/lib/python3.10/site-packages",
+        "/opt/ros/humble/lib/python3.10/site-packages",
+        "/opt/ros/humble/local/lib/python3.10/dist-packages"
+    ]
+}
