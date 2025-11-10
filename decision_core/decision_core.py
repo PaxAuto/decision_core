@@ -51,8 +51,6 @@ class DecisionUnit:
         self.booking_request = None
         self.destination_reached = None
         self.door_status = None
-        self.previous_door_status = None
-        self.door_closed_now = None
         self.authorization_result = None
         self.emergency_button = None
         self.user_inside = None
@@ -101,7 +99,7 @@ class DecisionUnit:
 
         # User Story 5,1: From BOARDING → DRIVING_AND_PLANNING 
         self.machine.add_transition('try_transition', 'BOARDING', 'DRIVING_AND_PLANNING',
-                                    conditions=['is_door_closed_now'], after='act_T3')
+                                    conditions=['is_user_inside','is_door_closed'], after='act_T3')
 
         # User Story 3.20: From DRIVING_AND_PLANNING → DROP_OFF_AND_DEBOARDING 
         self.machine.add_transition('try_transition', 'DRIVING_AND_PLANNING', 'DROP_OFF_AND_DEBOARDING',
@@ -109,7 +107,7 @@ class DecisionUnit:
 
         # User Story 7.1: From DROP_OFF_AND_DEBOARDING → PARKING 
         self.machine.add_transition('try_transition', 'DROP_OFF_AND_DEBOARDING', 'PARKING',
-                                    conditions=['is_door_closed_now'],
+                                    conditions=['is_door_closed'],
                                     unless=['is_booking_request'],
                                     after='act_T5')
 
@@ -126,11 +124,11 @@ class DecisionUnit:
 
         # User Story 7.2: From DROP_OFF_AND_DEBOARDING → DRIVING_AND_PLANNING if a new booking received
         self.machine.add_transition('try_transition', 'DROP_OFF_AND_DEBOARDING', 'DRIVING_AND_PLANNING',
-                                    conditions=['is_booking_request'], after='act_T8')
+                                    conditions=['is_booking_request'], after='act_T1')
 
         # User Story 8.2: From PARKING → DRIVING_AND_PLANNING if new booking request received
         self.machine.add_transition('try_transition', 'PARKING', 'DRIVING_AND_PLANNING',
-                                    conditions=['is_booking_request'], after='act_T9')
+                                    conditions=['is_booking_request'], after='act_T1')
 
     # -----------------------------------------------------------
     # Condition Functions — Evaluate ROS topic flags
@@ -141,7 +139,7 @@ class DecisionUnit:
     def is_authorization_result(self): return self.authorization_result is True
     def is_emergency_button(self): return self.emergency_button is True
     def is_user_inside(self): return self.user_inside is True
-    def is_door_closed_now(self): return self.door_closed_now is True
+    def is_door_closed(self): return not(self.door_status) is True
 
     # -----------------------------------------------------------
     # FSM Diagram Generation
@@ -165,8 +163,7 @@ class DecisionUnit:
         # Shuttle starts driving and planning route
         self.publish_state('DRIVING_AND_PLANNING')
         self.publish_shuttle_conf(True)
-        self.user_inside = False
-        # Wait until booking_request becomes False (trip finished)
+        # Wait until booking_request becomes False 
         while(True):
             if self.booking_request == False:
                 self.publish_shuttle_conf(False)
@@ -175,62 +172,29 @@ class DecisionUnit:
     def act_T2(self):
         # Boarding process begins
         self.publish_state('BOARDING')
-        self.previous_door_status = self.door_status
-        while(True):
-            # Detect door close transition → boarding complete
-            if self.previous_door_status == True and self.door_status == False:
-                self.door_closed_now = True
-                self.user_inside = True
-                break
-            else:
-                self.door_closed_now = False
-                self.previous_door_status = self.door_status
+        delay(30) # --- delay for /destination_reached = False from L&L control component ---
 
     def act_T3(self):
         # Resume driving after boarding
         self.publish_state('DRIVING_AND_PLANNING')
-        delay(30)
+        
 
     def act_T4(self):
         # Shuttle reaches drop-off area, waiting for door actions
         self.publish_state('DROP_OFF_AND_DEBOARDING')
-        self.previous_door_status = self.door_status
-        while(True):
-            # Wait until doors close again (deboarding complete)
-            if self.previous_door_status == True and self.door_status == False:
-                self.door_closed_now = True
-                self.user_inside = False
-                break
-            else:
-                self.door_closed_now = False
-                self.previous_door_status = self.door_status
+        delay(30)
 
     def act_T5(self):
         # Parking mode after deboarding complete
         self.publish_state('PARKING')
-        delay(30)
+        
 
     def act_T6(self):
         # Reset system back to IDLE state
         self.publish_state('IDLE')
+        delay(30)
 
-    def act_T8(self):
-        # Reactivate driving mode for next booking
-        self.publish_state('DRIVING_AND_PLANNING')
-        self.publish_shuttle_conf(True)
-        while(True):
-            if self.booking_request == False:
-                self.publish_shuttle_conf(False)
-                break
-
-    def act_T9(self):
-        # From parking to new drive due to fresh booking
-        self.publish_state('DRIVING_AND_PLANNING')
-        self.publish_shuttle_conf(True)
-        while(True):
-            if self.booking_request == False:
-                self.publish_shuttle_conf(False)
-                break
+    
 
     # -----------------------------------------------------------
     # Helper Publishing Functions
@@ -288,6 +252,7 @@ class DecisionUnitNode(Node):
         self.create_subscription(Bool, '/door_status', self.cb_door_status, 10)
         self.create_subscription(Bool, '/authorization_result', self.cb_authorization_result, 10)
         self.create_subscription(Bool, '/emergency_button', self.cb_emergency_button, 10)
+        self.create_subscription(Bool, '/user_inside', self.cb_user_inside, 10)
 
         # --- Timers ---
         # Regularly republishes the latest /state and /shuttle_confirmation
@@ -325,6 +290,7 @@ class DecisionUnitNode(Node):
     def cb_door_status(self, msg): self.fsm.door_status = msg.data
     def cb_authorization_result(self, msg): self.fsm.authorization_result = msg.data
     def cb_emergency_button(self, msg): self.fsm.emergency_button = msg.data
+    def cb_user_inside(self, msg): self.fsm.user_inside = msg.data
 
 
 # -----------------------------------------------------------
