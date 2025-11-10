@@ -30,6 +30,7 @@ graph LR
         GF["/destination_reached"]:::grayEllipse
         AA["/door_status"]:::grayEllipse
         AB["/emergency_button"]:::grayEllipse
+        AC["/user_inside"]:::grayEllipse
 
     end
 
@@ -41,6 +42,7 @@ graph LR
     GF --> EM
     AA --> EM
     AB --> EM
+    AC --> EM
     EM --> DC
     EM --> BF
 
@@ -66,6 +68,7 @@ graph LR
     class GF soft_rectangle;
     class AA soft_rectangle;
     class AB soft_rectangle;
+    class Ac soft_rectangle;
 
     class DC soft_rectangle;
     class BF soft_rectangle;
@@ -81,6 +84,7 @@ graph LR
 | `/booking_request`         | Input   | `std_msgs/msg/Bool.msg`      | Provides a boolean indicating whether a booking request has been made.`(Booking received(True)and Booking not received(False)).`                 |
 | `/authorization_result`           | Input  | `std_msgs/msg/Bool.msg`      |Provides a boolean indicating whether the user is `authorized(True) or not authorized(False).`  |
 | `/destination_reached`        | Input   | `std_msgs/msg/Bool.msg`      |Provides a boolean indicating whether the shuttle has reached the destination. `(Destination reached(True) and not reached(False)).`|
+| `/user_inside`         | Input   | `std_msgs/msg/Bool.msg`      | Provides a boolean indicating whether the user is `inside(True)` the shuttle or `not(False).` |
 | `/door_status`         | Input   | `std_msgs/msg/Bool.msg`      | Provides the status of the shuttle doors open(True) or close(False). |
 | `/emergency_button`           | Input  | `std_msgs/msg/Bool.msg`      |Provides a boolean indicating whether the emergency button has been `pressed(True) or not(False).`    |
 | `/shuttle_confirmation`           | Output  | `std_msgs/msg/Bool.msg`      | 	Publishes whether the shuttle is confirmed for a ride `(shuttle confirmed(True) and not confirmed(False)).`|
@@ -90,11 +94,11 @@ graph LR
 | Trigger (Conditions)                         | From State           | To State                 | Action                                                              |
 |------------------------------|-------------|----------------------|--------------------------------------------------------------------------|
 | `/select_shuttle = 4` and `/booking_request = True`        | IDLE   | DRIVING AND PLANNING      |  1. Publish `/state = 1` (DRIVING AND PLANNING). <br> 2. Publish `/shuttle_confirmation = True` to server. <br>3. Keep DRIVING AND PLANNING state until booking_request becomes False from server. <br> 4. Once booking_request is False, publish /`shuttle_confirmation = False` to server.    |
-| `/user_auhtorization = True`  and `/destination_reached = True`      | DRIVING AND PLANNING   | BOARDING     | 1. Publish `/state = 2` (BOARDING).   <br>    2. Monitor door status to detect when the door first opened and then closed.          |
-| `/door_status = True` and then `/door_status = False`          | BOARDING  | DRIVING AND PLANNING      |1. Publish `/state = 1` (DRIVING AND PLANNING).  |
-| `/destination_reached = True`        | DRIVING AND PLANNING   | DROPOFF AND DEBOARDING      |1. Publish `/state = 3` (DROPOFF AND DEBOARDING).<br> 2. Monitor door status to detect when the door first opened and then closed.  |
-| `/emergency_button = True`         | DRIVING AND PLANNING   | DROPOFF AND DEBOARDING      | 1. Publish `/state = 3` (DROPOFF AND DEBOARDING).<br> 2. Monitor door status to detect when the door first opened and then closed.|
-| `/door_status = True and then /door_status = False` and `/booking_request = False`           | DROPOFF AND DEBOARDING  | PARKING      | 1. Publish `/state = 4` (PARKING)    |
+| `/user_auhtorization = True`  and `/destination_reached = True` and `/user_inside = False`      | DRIVING AND PLANNING   | BOARDING     | 1. Publish `/state = 2` (BOARDING).            |
+| `/user_inside = True` and `/door_status = False`          | BOARDING  | DRIVING AND PLANNING      |1. Publish `/state = 1` (DRIVING AND PLANNING).  |
+| `/user_inside = True` and `/destination_reached = True`       | DRIVING AND PLANNING   | DROPOFF AND DEBOARDING      |1. Publish `/state = 3` (DROPOFF AND DEBOARDING).
+| `/emergency_button = True`         | DRIVING AND PLANNING   | DROPOFF AND DEBOARDING      | 1. Publish `/state = 3` (DROPOFF AND DEBOARDING).
+| `/door_status = False` and `/booking_request = False`           | DROPOFF AND DEBOARDING  | PARKING      | 1. Publish `/state = 4` (PARKING)    |
 | `/booking_request = True`           | DROPOFF AND DEBOARDING  | DRIVING AND PLANNING      | 	1. Publish `/state = 1` (DRIVING AND PLANNING). <br> 2. Publish `/shuttle_confirmation = True` to server. <br>3. Keep DRIVING AND PLANNING state until booking_request becomes False from server. <br> 4. Once booking_request is False, publish /`shuttle_confirmation = False` to server.   |
 | `/destination_reached = True` and `/booking_request = False`           | PARKING  | IDLE        | 	1. Publish `/state = 0` (IDLE).|
 | `/booking_request = True`           | PARKING  | DRIVING AND PLANNING        | 	1. Publish `/state = 1` (DRIVING AND PLANNING). <br> 2. Publish `/shuttle_confirmation = True` to server. <br>3. Keep DRIVING AND PLANNING state until booking_request becomes False from server. <br> 4. Once booking_request is False, publish /`shuttle_confirmation = False` to server.  |
@@ -107,27 +111,27 @@ Process for testing the above interfaces can be found [here](interface_test.md).
 
 
 ## 🎯 User Stories 
-[US 2.3](https://miro.com/app/board/uXjVI9mh4O0=/?moveToWidget=3458764647163753676&cot=14): State transion from IDLE to DRIVING AND PLANNING
+[US 2.3](https://miro.com/app/board/uXjVI9mh4O0=/?moveToWidget=3458764647567204081&cot=14): State transion from IDLE to DRIVING AND PLANNING
 
-[US 3.19](https://miro.com/app/board/uXjVI9mh4O0=/?moveToWidget=3458764647165097962&cot=14) : State transion from DRIVING AND PLANNING to BOARDING
+[US 3.19](https://miro.com/app/board/uXjVI9mh4O0=/?moveToWidget=3458764647567204082&cot=14) : State transion from DRIVING AND PLANNING to BOARDING
 
-[US 5.1](https://miro.com/app/board/uXjVI9mh4O0=/?moveToWidget=3458764647166347143&cot=14) : State transion from BOARDING to DRIVING AND PLANNING
+[US 5.1](https://miro.com/app/board/uXjVI9mh4O0=/?moveToWidget=3458764647567204084&cot=14) : State transion from BOARDING to DRIVING AND PLANNING
 
-[US 3.20](https://miro.com/app/board/uXjVI9mh4O0=/?moveToWidget=3458764647166887321&cot=14) : State transion from DRIVING AND PLANNING to DROPOFF AND DEBOARDING
+[US 3.20](https://miro.com/app/board/uXjVI9mh4O0=/?moveToWidget=3458764647567204085&cot=14) : State transion from DRIVING AND PLANNING to DROPOFF AND DEBOARDING
 
-[US 7.1](https://miro.com/app/board/uXjVI9mh4O0=/?moveToWidget=3458764647167520276&cot=14) : State transion from DROPOFF AND DEBOARDING to PARKING
+[US 7.1](https://miro.com/app/board/uXjVI9mh4O0=/?moveToWidget=3458764647567204087&cot=14) : State transion from DROPOFF AND DEBOARDING to PARKING
 
-[US 8.1](https://miro.com/app/board/uXjVI9mh4O0=/?moveToWidget=3458764647168209098&cot=14): State transion from PARKING to IDLE
+[US 8.1](https://miro.com/app/board/uXjVI9mh4O0=/?moveToWidget=3458764647567204088&cot=14): State transion from PARKING to IDLE
 
-[US 7.2](https://miro.com/app/board/uXjVI9mh4O0=/?moveToWidget=3458764647172377638&cot=14) : State transion from DROPOFF AND DEBOARDING to DRIVING AND PLANNING(New booking received during DROPOFF AND DEBOARDING)
+[US 7.2](https://miro.com/app/board/uXjVI9mh4O0=/?moveToWidget=3458764647567204090&cot=14) : State transion from DROPOFF AND DEBOARDING to DRIVING AND PLANNING(New booking received during DROPOFF AND DEBOARDING)
 
-[US 8.2](https://miro.com/app/board/uXjVI9mh4O0=/?moveToWidget=3458764647172805030&cot=14) : State transion from PARKING to DRIVING AND PLANNING(New booking received during PARKING)
+[US 8.2](https://miro.com/app/board/uXjVI9mh4O0=/?moveToWidget=3458764647567204091&cot=14) : State transion from PARKING to DRIVING AND PLANNING(New booking received during PARKING)
 
 ## 🛠️ Installation
 First, open terminal and install transitions framework and Streamlit(for real-time state visualization).
 ```bash
-pip install transitions
-pip install streamlit
+pip3 install transitions
+pip3 install streamlit
 ```
 1. Create workspace, src and go to src
 ```bash
@@ -140,12 +144,12 @@ cd src
 ```bash
 git https://git.hs-coburg.de/pax_auto/decision_core.git
 ```
-5. Return to workspace and build the package
+3. Return to workspace and build the package
 ```bash
 cd ..
 colcon build --packages-select decision_core
 ```
-6. Source the setup files
+4. Source the setup files
 ```bash
 source install/setup.bash
 ```
