@@ -51,7 +51,6 @@ class DecisionUnit:
         self.booking_request = None
         self.destination_reached = None
         self.door_status = None
-        self.authorization_result = None
         self.emergency_button = None
         self.user_inside = None
 
@@ -92,7 +91,7 @@ class DecisionUnit:
 
         # User Story 3.19: From DRIVING_AND_PLANNING → BOARDING 
         self.machine.add_transition('try_transition', 'DRIVING_AND_PLANNING', 'BOARDING',
-                                    conditions=['is_destination_reached', 'is_authorization_result'],
+                                    conditions=['is_destination_reached'],
                                     # --- Above Condtions Must be True for Transition ---
                                     unless=['is_user_inside'], # --- Condtion Must be False for Transition ---
                                     after='act_T2')
@@ -136,7 +135,6 @@ class DecisionUnit:
     def is_select_shuttle(self): return self.select_shuttle == 4
     def is_booking_request(self): return self.booking_request is True
     def is_destination_reached(self): return self.destination_reached is True
-    def is_authorization_result(self): return self.authorization_result is True
     def is_emergency_button(self): return self.emergency_button is True
     def is_user_inside(self): return self.user_inside is True
     def is_door_closed(self): return not(self.door_status) is True
@@ -236,7 +234,7 @@ class DecisionUnitNode(Node):
 
         # --- Publishers ---
         # /state → Int32 code representing FSM state
-        # /shuttle_confirmation → Bool flag for booking confirmation
+        # /shuttle_confirmation → Bool flag for booking confirmation to server
         self.state_pub = self.create_publisher(Int32, '/state', 10)
         self.shuttle_confirmation_pub = self.create_publisher(Bool, '/shuttle_confirmation', 10)
 
@@ -250,7 +248,6 @@ class DecisionUnitNode(Node):
         self.create_subscription(Bool, '/booking_request', self.cb_booking_request, 10)
         self.create_subscription(Bool, '/destination_reached', self.cb_destination_reached, 10)
         self.create_subscription(Bool, '/door_status', self.cb_door_status, 10)
-        self.create_subscription(Bool, '/authorization_result', self.cb_authorization_result, 10)
         self.create_subscription(Bool, '/emergency_button', self.cb_emergency_button, 10)
         self.create_subscription(Bool, '/user_inside', self.cb_user_inside, 10)
 
@@ -288,7 +285,6 @@ class DecisionUnitNode(Node):
     def cb_booking_request(self, msg): self.fsm.booking_request = msg.data
     def cb_destination_reached(self, msg): self.fsm.destination_reached = msg.data
     def cb_door_status(self, msg): self.fsm.door_status = msg.data
-    def cb_authorization_result(self, msg): self.fsm.authorization_result = msg.data
     def cb_emergency_button(self, msg): self.fsm.emergency_button = msg.data
     def cb_user_inside(self, msg): self.fsm.user_inside = msg.data
 

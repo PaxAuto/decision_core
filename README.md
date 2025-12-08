@@ -26,7 +26,6 @@ graph LR
     subgraph Input topics
         EVSEAL["/select_shuttle"]:::grayEllipse
         MS["/booking_request"]:::grayEllipse
-        SA["/authorization_result"]:::grayEllipse
         GF["/destination_reached"]:::grayEllipse
         AA["/door_status"]:::grayEllipse
         AB["/emergency_button"]:::grayEllipse
@@ -38,7 +37,6 @@ graph LR
 
     EVSEAL --> EM
     MS --> EM
-    SA --> EM
     GF --> EM
     AA --> EM
     AB --> EM
@@ -68,7 +66,7 @@ graph LR
     class GF soft_rectangle;
     class AA soft_rectangle;
     class AB soft_rectangle;
-    class Ac soft_rectangle;
+    class AC soft_rectangle;
 
     class DC soft_rectangle;
     class BF soft_rectangle;
@@ -82,7 +80,6 @@ graph LR
 |------------------------------|---------|----------------------|--------------------------------------------------------------------------|
 | `/select_shuttle`        | Input   | `std_msgs/msg/Int8.msg`      |  Provide the number of shuttle (e.g. which shuttle is selected for the ride).              |
 | `/booking_request`         | Input   | `std_msgs/msg/Bool.msg`      | Provides a boolean indicating whether a booking request has been made.`(Booking received(True)and Booking not received(False)).`                 |
-| `/authorization_result`           | Input  | `std_msgs/msg/Bool.msg`      |Provides a boolean indicating whether the user is `authorized(True) or not authorized(False).`  |
 | `/destination_reached`        | Input   | `std_msgs/msg/Bool.msg`      |Provides a boolean indicating whether the shuttle has reached the destination. `(Destination reached(True) and not reached(False)).`|
 | `/user_inside`         | Input   | `std_msgs/msg/Bool.msg`      | Provides a boolean indicating whether the user is `inside(True)` the shuttle or `not(False).` |
 | `/door_status`         | Input   | `std_msgs/msg/Bool.msg`      | Provides the status of the shuttle doors open(True) or close(False). |
@@ -90,11 +87,16 @@ graph LR
 | `/shuttle_confirmation`           | Output  | `std_msgs/msg/Bool.msg`      | 	Publishes whether the shuttle is confirmed for a ride `(shuttle confirmed(True) and not confirmed(False)).`|
 | `/state`           | Output  | `std_msgs/msg/Int32.msg`      | 	Provides the current state : `0 = IDLE , 1 = DRIVING AND PLANNING , 2 = BOARDING , DROPOFF AND DEBOARDING = 3 , PARKING = 4`|
 
+### State Diagram:
+<div align="center">
+  <img src="assets/state_diagram.png" alt="state_diagram" width="700"/>
+</div>
+
 ### State Transition Logic:
 | Trigger (Conditions)                         | From State           | To State                 | Action                                                              |
 |------------------------------|-------------|----------------------|--------------------------------------------------------------------------|
 | `/select_shuttle = 4` and `/booking_request = True`        | IDLE   | DRIVING AND PLANNING      |  1. Publish `/state = 1` (DRIVING AND PLANNING). <br> 2. Publish `/shuttle_confirmation = True` to server. <br>3. Keep DRIVING AND PLANNING state until booking_request becomes False from server. <br> 4. Once booking_request is False, publish /`shuttle_confirmation = False` to server.    |
-| `/user_auhtorization = True`  and `/destination_reached = True` and `/user_inside = False`      | DRIVING AND PLANNING   | BOARDING     | 1. Publish `/state = 2` (BOARDING).            |
+| `/destination_reached = True` and `/user_inside = False`      | DRIVING AND PLANNING   | BOARDING     | 1. Publish `/state = 2` (BOARDING).            |
 | `/user_inside = True` and `/door_status = False`          | BOARDING  | DRIVING AND PLANNING      |1. Publish `/state = 1` (DRIVING AND PLANNING).  |
 | `/user_inside = True` and `/destination_reached = True`       | DRIVING AND PLANNING   | DROPOFF AND DEBOARDING      |1. Publish `/state = 3` (DROPOFF AND DEBOARDING).
 | `/emergency_button = True`         | DRIVING AND PLANNING   | DROPOFF AND DEBOARDING      | 1. Publish `/state = 3` (DROPOFF AND DEBOARDING).
