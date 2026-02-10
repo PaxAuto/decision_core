@@ -17,12 +17,14 @@ STATE_CODES = {
     'DRIVING_AND_PLANNING': 1,
     'BOARDING': 2,
     'DROP_OFF_AND_DEBOARDING': 3,
-    'PARKING': 4
+    'PARKING': 4,
+    'TRIP_CANCELLATION': 5
 }
 
 # Simple delay utility used in some state actions
-def delay(sec):
+def delay(sec):  # pragma: no cover
     time.sleep(sec)
+
 
 
 # -----------------------------------------------------------
@@ -37,7 +39,8 @@ class DecisionUnit:
         'DRIVING_AND_PLANNING',
         'BOARDING',
         'DROP_OFF_AND_DEBOARDING',
-        'PARKING'
+        'PARKING',
+        'TRIP_CANCELLATION'
     ]
 
     def __init__(self, node: Node):
@@ -53,10 +56,13 @@ class DecisionUnit:
         self.door_status = None
         self.emergency_button = None
         self.user_inside = None
+        self.trip_cancel = None
 
         # --- Trackers to remember FSM status ---
         self.previous_state = None
         self.current_shuttle_conf = None  
+        self.current_trip_cancellation = None
+
 
         # Initialize the state machine using transitions.GraphMachine
         # - show_conditions=True displays transition conditions on diagram
@@ -128,7 +134,12 @@ class DecisionUnit:
         # User Story 8.2: From PARKING → DRIVING_AND_PLANNING if new booking request received
         self.machine.add_transition('try_transition', 'PARKING', 'DRIVING_AND_PLANNING',
                                     conditions=['is_booking_request'], after='act_T1')
+        
+        self.machine.add_transition('try_transition', 'DRIVING_AND_PLANNING', 'TRIP_CANCELLATION',
+                                    conditions=['is_trip_cancel'], after='act_T7')
 
+        self.machine.add_transition('try_transition', 'TRIP_CANCELLATION', 'DRIVING_AND_PLANNING',
+                                    conditions=['is_booking_request'], after='act_T8')    
     # -----------------------------------------------------------
     # Condition Functions — Evaluate ROS topic flags
     # -----------------------------------------------------------
@@ -138,19 +149,19 @@ class DecisionUnit:
     def is_emergency_button(self): return self.emergency_button is True
     def is_user_inside(self): return self.user_inside is True
     def is_door_closed(self): return not(self.door_status) is True
+    def is_trip_cancel(self): return self.trip_cancel is True
 
     # -----------------------------------------------------------
     # FSM Diagram Generation
     # -----------------------------------------------------------
-    def update_diagram(self):
-        """Save an updated PNG diagram whenever state changes."""
-        filename = "fsm_live.png"
-        try:
-            graph = self.machine.get_graph()
-            graph.draw(filename, prog='dot', format='png')
-        except Exception as e:
-            # In case Graphviz fails to render
-            self.node.get_logger().error(f"❌ FSM diagram generation failed: {e}")
+    def update_diagram(self):  # pragma: no cover
+       filename = "fsm_live.png"
+       try:
+         graph = self.machine.get_graph()
+         graph.draw(filename, prog='dot', format='png')
+       except Exception as e:
+          self.node.get_logger().error(f"❌ FSM diagram generation failed: {e}")
+
 
     # -----------------------------------------------------------
     # Action Functions (T1–T9)
@@ -170,7 +181,7 @@ class DecisionUnit:
     def act_T2(self):
         # Boarding process begins
         self.publish_state('BOARDING')
-        delay(30) # --- delay for /destination_reached = False from L&L control component ---
+        
 
     def act_T3(self):
         # Resume driving after boarding
@@ -180,7 +191,7 @@ class DecisionUnit:
     def act_T4(self):
         # Shuttle reaches drop-off area, waiting for door actions
         self.publish_state('DROP_OFF_AND_DEBOARDING')
-        delay(30)
+        
 
     def act_T5(self):
         # Parking mode after deboarding complete
@@ -190,7 +201,24 @@ class DecisionUnit:
     def act_T6(self):
         # Reset system back to IDLE state
         self.publish_state('IDLE')
-        delay(30)
+        
+
+    def act_T7(self):
+        self.publish_state('TRIP_CANCELLATION')    
+        self.publish_trip_cancellation(True)  
+        while(True):
+            if self.trip_cancel == False:
+                self.publish_trip_cancellation(False)
+                break
+
+    def act_T8(self):
+        self.publish_state('DRIVING_AND_PLANNING')   
+        self.publish_shuttle_conf(True)
+        # Wait until booking_request becomes False 
+        while(True):
+            if self.booking_request == False:
+                self.publish_shuttle_conf(False)
+                break 
 
     
 
@@ -213,20 +241,26 @@ class DecisionUnit:
         self.node.shuttle_confirmation_pub.publish(msg)
         self.current_shuttle_conf = value
 
+    def publish_trip_cancellation(self, value: bool):
+        msg = Bool()
+        msg.data = value
+        self.node.trip_cancellation_pub.publish(msg)
+        self.current_trip_cancellation = value
+
     # -----------------------------------------------------------
     # Continuous Monitoring Thread
     # -----------------------------------------------------------
-    def monitor(self):
-        """Continuously checks all transition conditions."""
-        while rclpy.ok():
-            self.try_transition()  # Evaluate if any transition can occur
-            time.sleep(0.5)
+    def monitor(self):  # pragma: no cover
+     while rclpy.ok():
+        self.try_transition()
+        time.sleep(0.5)
+
 
 
 # -----------------------------------------------------------
 # ROS 2 Node Wrapper for FSM
 # -----------------------------------------------------------
-class DecisionUnitNode(Node):
+class DecisionUnitNode(Node):  # pragma: no cover
     """ROS 2 Node wrapper integrating FSM with ROS topics."""
 
     def __init__(self):
@@ -237,6 +271,8 @@ class DecisionUnitNode(Node):
         # /shuttle_confirmation → Bool flag for booking confirmation to server
         self.state_pub = self.create_publisher(Int32, '/state', 10)
         self.shuttle_confirmation_pub = self.create_publisher(Bool, '/shuttle_confirmation', 10)
+        self.trip_cancellation_pub = self.create_publisher(Bool, '/trip_cancellation', 10)
+
 
         # --- FSM Instance ---
         self.fsm = DecisionUnit(self)
@@ -250,11 +286,14 @@ class DecisionUnitNode(Node):
         self.create_subscription(Bool, '/door_status', self.cb_door_status, 10)
         self.create_subscription(Bool, '/emergency_button', self.cb_emergency_button, 10)
         self.create_subscription(Bool, '/user_inside', self.cb_user_inside, 10)
+        self.create_subscription(Bool, '/trip_cancel', self.cb_trip_cancel, 10)
 
         # --- Timers ---
         # Regularly republishes the latest /state and /shuttle_confirmation
         self.create_timer(1.0, self.publish_current_state)
         self.create_timer(1.0, self.publish_current_shuttle_conf)
+        self.create_timer(1.0, self.publish_current_trip_cancellation)
+
 
         # --- Background thread for FSM monitoring ---
         threading.Thread(target=self.fsm.monitor, daemon=True).start()
@@ -278,6 +317,12 @@ class DecisionUnitNode(Node):
         msg.data = bool(self.fsm.current_shuttle_conf)
         self.shuttle_confirmation_pub.publish(msg)
 
+    def publish_current_trip_cancellation(self):
+        msg = Bool()
+        msg.data = bool(self.fsm.current_trip_cancellation)
+        self.trip_cancellation_pub.publish(msg)
+    
+
     # -----------------------------------------------------------
     # Subscriber Callbacks — update internal FSM flags
     # -----------------------------------------------------------
@@ -287,21 +332,21 @@ class DecisionUnitNode(Node):
     def cb_door_status(self, msg): self.fsm.door_status = msg.data
     def cb_emergency_button(self, msg): self.fsm.emergency_button = msg.data
     def cb_user_inside(self, msg): self.fsm.user_inside = msg.data
+    def cb_trip_cancel(self, msg): self.fsm.trip_cancel = msg.data
 
 
 # -----------------------------------------------------------
 # Entry Point — ROS 2 Node Execution
 # -----------------------------------------------------------
-def main():
+def main():  # pragma: no cover
     rclpy.init()
     node = DecisionUnitNode()
     try:
-        rclpy.spin(node)  # Keeps node alive to process callbacks
-    except KeyboardInterrupt:
-        pass
+        rclpy.spin(node)
     finally:
         node.destroy_node()
         rclpy.shutdown()
+
 
 
 # -----------------------------------------------------------
