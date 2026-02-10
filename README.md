@@ -45,6 +45,7 @@ graph LR
     AC --> EM
     EM --> DC
     EM --> BF
+    EM --> BE
 
     subgraph Output topics
         DC["/shuttle_confirmation"]:::grayEllipse
