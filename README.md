@@ -96,7 +96,7 @@ graph LR
 
 ### State Diagram:
 <div align="center">
-  <img src="assets/state_diagram.png" alt="state_diagram" width="700"/>
+  <img src="assets/state.png" alt="state_diagram" width="700"/>
 </div>
 
 
